@@ -58,10 +58,10 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
 
     public Map<String, MediaStream> localStreams;
     public Map<String, MediaStreamTrack> localTracks;
-    private final Map<String, PeerConnectionObserver> mPeerConnectionObservers;
+    public Map<String, PeerConnectionObserver> peerConnectionObserver; // change to public, so we can copy
 
     private final TextureRegistry textures;
-    private LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
+    public LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
 
     /**
      * The implementation of {@code getUserMedia} extracted into a separate file
@@ -85,7 +85,9 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
      */
     public static void registerWith(Registrar registrar) {
         final MethodChannel channel = new MethodChannel(registrar.messenger(), "FlutterWebRTC.Method");
-        channel.setMethodCallHandler(new FlutterWebRTCPlugin(registrar, channel));
+        final FlutterWebRTCPlugin plugin = new FlutterWebRTCPlugin(registrar, channel);
+        channel.setMethodCallHandler(plugin);
+        registrar.publish(plugin);
     }
 
     public Registrar registrar() {
@@ -96,7 +98,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         this.registrar = registrar;
         this.channel = channel;
         this.textures = registrar.textures();
-        mPeerConnectionObservers = new HashMap<String, PeerConnectionObserver>();
+        peerConnectionObserver = new HashMap<String, PeerConnectionObserver>();
         localStreams = new HashMap<String, MediaStream>();
         localTracks = new HashMap<String, MediaStreamTrack>();
 
@@ -407,7 +409,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
     }
 
     private PeerConnection getPeerConnection(String id) {
-        PeerConnectionObserver pco = mPeerConnectionObservers.get(id);
+        PeerConnectionObserver pco = peerConnectionObserver.get(id);
         return (pco == null) ? null : pco.getPeerConnection();
     }
 
@@ -678,7 +680,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
                 parseMediaConstraints(constraints),
                 observer);
         observer.setPeerConnection(peerConnection);
-        mPeerConnectionObservers.put(peerConnectionId, observer);
+        peerConnectionObserver.put(peerConnectionId, observer);
         return peerConnectionId;
     }
 
@@ -706,7 +708,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         MediaStream stream = localStreams.get(id);
 
         if (stream == null) {
-            for (Map.Entry<String, PeerConnectionObserver> entry : mPeerConnectionObservers.entrySet()) {
+            for (Map.Entry<String, PeerConnectionObserver> entry : peerConnectionObserver.entrySet()) {
                 PeerConnectionObserver pco = entry.getValue();
                 stream = pco.remoteStreams.get(id);
                 if (stream != null) {
@@ -722,7 +724,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         MediaStreamTrack track = localTracks.get(trackId);
 
         if (track == null) {
-            for (Map.Entry<String, PeerConnectionObserver> entry : mPeerConnectionObservers.entrySet()) {
+            for (Map.Entry<String, PeerConnectionObserver> entry : peerConnectionObserver.entrySet()) {
                 PeerConnectionObserver pco = entry.getValue();
                 track = pco.remoteTracks.get(trackId);
                 if (track != null) {
@@ -1183,7 +1185,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
     }
 
     public void peerConnectionGetStats(String trackId, String id, final Result result) {
-        PeerConnectionObserver pco = mPeerConnectionObservers.get(id);
+        PeerConnectionObserver pco = peerConnectionObserver.get(id);
         if (pco == null || pco.getPeerConnection() == null) {
             Log.d(TAG, "peerConnectionGetStats() peerConnection is null");
         } else {
@@ -1192,7 +1194,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
     }
 
     public void peerConnectionClose(final String id) {
-        PeerConnectionObserver pco = mPeerConnectionObservers.get(id);
+        PeerConnectionObserver pco = peerConnectionObserver.get(id);
         if (pco == null || pco.getPeerConnection() == null) {
             Log.d(TAG, "peerConnectionClose() peerConnection is null");
         } else {
@@ -1200,12 +1202,12 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         }
     }
     public void peerConnectionDispose(final String id) {
-        PeerConnectionObserver pco = mPeerConnectionObservers.get(id);
+        PeerConnectionObserver pco = peerConnectionObserver.get(id);
         if (pco == null || pco.getPeerConnection() == null) {
             Log.d(TAG, "peerConnectionDispose() peerConnection is null");
         } else {
             pco.dispose();
-            mPeerConnectionObservers.remove(id);
+            peerConnectionObserver.remove(id);
         }
     }
 
@@ -1229,7 +1231,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         // Forward to PeerConnectionObserver which deals with DataChannels
         // because DataChannel is owned by PeerConnection.
         PeerConnectionObserver pco
-                = mPeerConnectionObservers.get(peerConnectionId);
+                = peerConnectionObserver.get(peerConnectionId);
         if (pco == null || pco.getPeerConnection() == null) {
             Log.d(TAG, "createDataChannel() peerConnection is null");
         } else {
@@ -1241,7 +1243,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         // Forward to PeerConnectionObserver which deals with DataChannels
         // because DataChannel is owned by PeerConnection.
         PeerConnectionObserver pco
-                = mPeerConnectionObservers.get(peerConnectionId);
+                = peerConnectionObserver.get(peerConnectionId);
         if (pco == null || pco.getPeerConnection() == null) {
             Log.d(TAG, "dataChannelSend() peerConnection is null");
         } else {
@@ -1253,7 +1255,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
         // Forward to PeerConnectionObserver which deals with DataChannels
         // because DataChannel is owned by PeerConnection.
         PeerConnectionObserver pco
-                = mPeerConnectionObservers.get(peerConnectionId);
+                = peerConnectionObserver.get(peerConnectionId);
         if (pco == null || pco.getPeerConnection() == null) {
             Log.d(TAG, "dataChannelClose() peerConnection is null");
         } else {

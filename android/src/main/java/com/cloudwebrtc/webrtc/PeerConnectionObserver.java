@@ -29,7 +29,7 @@ import org.webrtc.VideoTrack;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
 
-class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.StreamHandler {
+public class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.StreamHandler {
     private final static String TAG = FlutterWebRTCPlugin.TAG;
 
     private final SparseArray<DataChannel> dataChannels
